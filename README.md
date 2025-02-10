@@ -7,7 +7,7 @@
 The idea is to have AI intervining the triage process and analystic process <br><br>
 Most of the trigae of the test cases can be divided into 3 catagories of failure ,<br><br>
   <ol>
-<li>system failure </li>
+<li>system/firmware failure </li>
 <li>setup failure </li>
 <li>test failure </li>
   </ol> <br>
