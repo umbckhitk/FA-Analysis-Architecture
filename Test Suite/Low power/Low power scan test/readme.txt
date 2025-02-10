@@ -1,0 +1,2 @@
+Test Case: Perform scan-based testing with low-power techniques, including minimizing transitions between logic states to reduce switching power.
+Purpose: Ensures that the chip's testing infrastructure doesn't consume excessive power, especially during scan-based self-tests.

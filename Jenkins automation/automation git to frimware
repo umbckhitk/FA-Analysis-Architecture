@@ -1,0 +1,101 @@
+
+//*** a Jenkins pipeline script (Jenkinsfile) that automates the various 
+//*** stages of the SoC test architecture, such as building, testing, and deployment
+// @ author Harish 
+// date : 2/9/2025
+
+pipeline {
+    agent any
+
+    environment {
+        SOC_TEST_SUITE = 'path/to/test-suite'
+        BUILD_DIR = 'path/to/build'         
+        DUT1_TEST_RESULTS = 'dut1/results'   
+        DUT2_TEST_RESULTS = 'dut2/results'   
+        JIRA_URL = 'http://your.jira.url'  
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git 'https://your-bitbucket-repository-url'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                echo 'Building SoC...'
+                sh '''
+                make clean
+                make build
+                '''
+            }
+        }
+
+        stage('Test') {
+            parallel {
+                stage('Test DUT-1') {
+                    steps {
+                        echo 'Running tests for DUT-1...'
+                        sh '''
+                        cd $SOC_TEST_SUITE
+                        ./run_tests.sh DUT-1 > $DUT1_TEST_RESULTS/result.log
+                        '''
+                    }
+                }
+                stage('Test DUT-2') {
+                    steps {
+                        echo 'Running tests for DUT-2...'
+                        sh '''
+                        cd $SOC_TEST_SUITE
+                        ./run_tests.sh DUT-2 > $DUT2_TEST_RESULTS/result.log
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('Failure Handling') {
+            steps {
+                script {
+                    def dut1_result = readFile("${DUT1_TEST_RESULTS}/result.log")
+                    def dut2_result = readFile("${DUT2_TEST_RESULTS}/result.log")
+
+                    if (dut1_result.contains('FAILURE') || dut2_result.contains('FAILURE')) {
+                        echo 'Test failed, logging bug in JIRA...'
+                        sh """
+                        curl -X POST -u your-jira-credentials -H 'Content-Type: application/json' \
+                        -d '{"fields": {"project": {"key": "SOC"},"summary": "Test Failure in DUT-1/DUT-2","description": "Test failed in the automation suite","issuetype": {"name": "Bug"}}}' \
+                        ${JIRA_URL}/rest/api/2/issue
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                echo 'Deploying SoC...'
+                sh '''
+                make deploy
+                '''
+            }
+        }
+
+        stage('Failure Analysis Dashboard') {
+            steps {
+                echo 'Generating Failure Analysis Dashboard...'
+                sh '''
+                python generate_dashboard.py --dut1 $DUT1_TEST_RESULTS --dut2 $DUT2_TEST_RESULTS
+                '''
+            }
+        }
+    }
+
+    post {
+        always {
+            echo 'Cleaning up...'
+            sh 'make clean'
+        }
+    }
+}
